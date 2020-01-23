@@ -81,6 +81,11 @@ def test_non_callable():
     assert curry(5) == 5
 
 
+def test_builtin_function():
+    cstr = curry(str)
+    assert cstr(123) == '123'
+
+
 def test_callable_with_no_parameter():
     assert curry(hello) == 'hello'
     assert curry(partial(hello)) == 'hello'
@@ -236,6 +241,11 @@ def test_readme_examples():
     dbl_inc = compose(dbl, inc)
     assert dbl_inc(10) == 22
 
+    pipeline_1 = compose(compose(dbl, compose(inc, dbl)), compose(inc, inc))
+    pipeline_2 = compose(compose(compose(compose(dbl, inc), dbl), inc), inc)
+    assert pipeline_1(10) == 2 * (1 + 2 * (1 + 1 + 10))
+    assert pipeline_2(10) == 2 * (1 + 2 * (1 + 1 + 10))
+
     # ---------------
 
     @curry
@@ -279,12 +289,12 @@ def test_readme_examples():
     def give_name(who, name, verbose=False):
         if verbose:
             print('Hello', name)
-        new_who = {**who, 'name':name}
+        new_who = {**who, 'name': name}
         return new_who
 
     @curry
-    def create_genius(iq: int, best_quality:str, *, verbose=False):
-        you = dict(iq = 50, awesome_at=best_quality)
+    def create_genius(iq: int, best_quality: str, *, verbose=False):
+        you = dict(iq=50, awesome_at=best_quality)
         if iq > you['iq']:
             you['iq'] = iq
             if verbose:

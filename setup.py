@@ -5,9 +5,10 @@ https://packaging.python.org/guides/distributing-packages-using-setuptools/
 https://github.com/pypa/sampleproject
 """
 
-from setuptools import setup, find_packages
-from os import path
 from io import open
+from os import path
+
+from setuptools import setup, find_packages
 
 here = path.abspath(path.dirname(__file__))
 
@@ -22,8 +23,7 @@ setup(
     long_description_content_type='text/x-rst',
     url='https://github.com/Niriel/yummycurry',
     author='Niriel',
-    #author_email='nope, use github',
-
+    # author_email='nope, use github',
 
     classifiers=[
         'Development Status :: 3 - Alpha',

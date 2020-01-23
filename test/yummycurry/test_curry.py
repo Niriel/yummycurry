@@ -317,7 +317,6 @@ def test_readme_examples():
 
     smart = create_genius(name='Darling', iq=160, verbose=True)
     dear_reader = smart(best_quality='spitting fire')
-    return
 
     # ---------------
 
@@ -351,6 +350,7 @@ def test_readme_examples():
     # ---------------
 
     i10 = compose(inc, x=10)
+    print(repr(i10))
     assert i10.func == _compose
     assert i10.args == (inc,)
     assert i10.keywords == dict(x=10)

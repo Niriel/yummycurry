@@ -32,7 +32,7 @@ Walkthrough
 Decorator or simple function
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The function ``yummycurry.curry`` can be used as a decorator or as a function.
+The function ``yummycurry.curry`` can be used as a decorator or as a function::
 
     from yummycurry import curry
 
@@ -60,8 +60,8 @@ It is common to see function composition implemented as such::
 
 One severe problem is that lambdas cannot be pickled, which prevents them
 from being shared easily in a multiprocessing environment.
-Another problem is the lack of ``__doc__`` and ``__name__`` which make
-introspection, documentation and pretty-printing difficult.
+Another problem is the lack of useful ``__doc__`` and ``__name__`` which make
+introspection, documentation and printing/logging difficult.
 Finally they are difficult to read.
 As a rule of thumb, lambdas should not escape the scope in which they are
 defined.
@@ -79,7 +79,7 @@ relying on ``curry`` to wait for it::
     assert dbl_inc(10) == 22
 
     # Function composition is associative: as long as the order or the leaves
-    # is preserved, the way that tree branches does not matter.
+    # is preserved, the way that the tree forks does not matter.
     pipeline_1 = compose(compose(dbl, compose(inc, dbl)), compose(inc, inc))
     pipeline_2 = compose(compose(compose(compose(dbl, inc), dbl), inc), inc)
     assert pipeline_1(10) == 2 * (1 + 2 * (1 + 1 + 10))
@@ -88,7 +88,7 @@ relying on ``curry`` to wait for it::
 This version of ``compose``, which relies on ``curry``, has no lambdas and is
 therefore picklable.
 We will see later that ``curry`` preserves the name, documentation, and even
-the signature of the underlying object.
+the signature of the underlying callable.
 Those are also features of ``functools.partial``, so ``yummycurry`` brings no
 surprise there.
 
@@ -156,7 +156,7 @@ Automatic re-currying
 ,,,,,,,,,,,,,,,,,,,,,
 
 Not only does ``yummycurry`` re-curries its underlying callable when it needs
-more arguments, but it also automatically curry any callable resulting from
+more arguments, but it also automatically curries any callable resulting from
 its application.
 
 If a callable ``f0`` returns a callable ``f1`` that is not explicitly
@@ -170,7 +170,7 @@ curried, then ``curry(f0)`` will automatically curry ``f1``::
     # Without currying, this is the only thing that works:
     assert f0(1)(2, 3) == 123
 
-	try:
+    try:
         assert f0(1)(2)(3) == 123
     except TypeError:
         pass  # The result of f0(1) is not curried so f0(1)(2) is incorrect.
@@ -186,7 +186,7 @@ In this example, the number ``123`` is not callable so the automatic
 currying and application stops.
 
 When currying, we wish to always preserve ``f(x, y) == f(x)(y)``.
-There are cases in which this symmetry cannot be preserved: when ``f`` accept
+There are cases in which this symmetry cannot be preserved: when ``f`` accepts
 a variable-argument parameter (like ``*args`` or ``**kwargs``), or when a
 parameter has a default value.
 This will be addressed later in this document.
@@ -212,7 +212,7 @@ turns a function-returning-function (``a -> (b -> c)``)
 into a function of several parameters (``(a, b) -> c``).
 
 The process repeats itself automatically until it runs out of arguments or the
-result is not callable.
+result is not callable::
 
     def one_param_only(x):
         def i_eat_leftovers(y):
@@ -224,9 +224,9 @@ result is not callable.
     except TypeError:
         pass  # We knew it would not work.
 
-With ``yummycurry`` you can call a one-parameter functions with more than one
+With ``yummycurry`` you can call a one-parameter function with more than one
 argument.
-In our example, ``one_param_only`` does not use the ``'world'``,
+In our example, ``one_param_only`` does not use ``'world'``,
 so ``curry`` passes it to the result of ``one_param_only``, which is
 a ``i_eat_leftovers`` closure::
 
@@ -236,7 +236,7 @@ a ``i_eat_leftovers`` closure::
 
 Until now, we have always called ``curry`` or ``@curry`` with a single argument:
 the callable to curry.
-However, it is possible to give more arguments to ``curry``, they will simply
+However, it is possible to give more arguments to ``curry``; they will simply
 be passed to the underlying callable.
 
 The three following snippets are equivalent::
@@ -300,6 +300,8 @@ error messages close to the original ones).
 * If a positional-or-keyword parameter is fed both by a positional and
   a keyword argument, ``TypeError`` is raised.
 
+::
+
     @curry
     def give_name(who, name, verbose=False):
         if verbose:
@@ -347,13 +349,13 @@ The order of the keyword arguments, and the number of calls that sets them,
 should not matter.  If it breaks in one case, it should breaks in all cases.
 Otherwise that is a debugging nightmare.
 
-One exception to this rule: variable-argument parameters
-(``*args`` and ``**kwargs``).
+Two exceptions to this rule: variable-argument parameters
+(``*args`` and ``**kwargs``), and parameters with default values.
 As shown later in this document, those break the symmetry.
 
 There are many ways to fix this call.
 For example, if we insist in passing ``name`` and ``iq`` as keywords, then
-it is necessary to pass ``best_quality` as a keyword as well to remove all
+it is necessary to pass ``best_quality`` as a keyword as well to remove all
 ambiguity.
 This can be done in any order, in as many calls as wanted::
 
@@ -368,8 +370,6 @@ This can be done in any order, in as many calls as wanted::
 
     smart = create_genius(name='Darling', iq=160, verbose=True)
     dear_reader = smart(best_quality='spitting fire')
-
-To summarize: ``curry`` breaks like normal Python would.
 
 
 Keyword arguments are used only once
@@ -399,21 +399,26 @@ call chain::
         return starving
 
     assert greedy(10)(1) == 11
-    # Here, ``greedy`` is satisfied with one argument, even if it could take more,
-    # so it executes and returns the ``starving`` closure which takes ``1``.
+
+Here, ``greedy`` is satisfied with one argument (even if it could take more)
+so it executes and returns the ``starving`` closure which takes ``1``.
+Because of this, we break the general rule-of-thumb that ``f(x)(y) == f(x, y)``.
+Indeed::
 
     try:
         assert greedy(10, 1) == 11
     except AssertionError:
         pass
-    # Here, ``greedy`` takes the ``1`` it its ``*args``, it even brags about it
-    # with its print statement.  Then, satisfied, it executes.  The result
-    # is the ``starving`` closure.  That closure does not receive any argument
-    # to feed its parameter so it cannot execute, it remains callable, it is
-    # not an integer and therefore is not equal to 11.
+
+Here, ``greedy`` takes the ``1`` it its ``*args``, it even brags about it
+with its print statement.  Then, satisfied, it executes.  The result
+is the ``starving`` closure.  That closure does not receive any argument
+to feed its parameter so it cannot execute, it remains callable, it is
+not an integer and therefore is not equal to 11.
+There is no workaround, one must give ``starving`` its own argument::
 
     assert greedy(10, 1000, 2000, 3000, 4000)(1) == 11
-    # There is no workaround, one must give ``starving`` its own argument.
+
 
 The same rule applies for variable-keyword-argument parameters::
 
@@ -424,8 +429,9 @@ The same rule applies for variable-keyword-argument parameters::
         return hawkins_radiation
 
     assert black_hole(bleep='proton', curvature='thicc')(bleep='neutrino') == 'tiny neutrino'
-    # Here, the black hole swallowed our bleeping proton, so the Hawking
-    # radiation requires that we specify a new bleep.
+
+Here, the black hole swallowed our bleeping proton,
+so the Hawking radiation requires that we specify a new bleep.
 
 As mentioned earlier in this document, variable-argument parameters break the
 general rule of thumb that ``f(x)(y) == f(x, y)``.
@@ -434,6 +440,8 @@ general rule of thumb that ``f(x)(y) == f(x, y)``.
 Inspection and debugging
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+``str``
+,,,,,,,
 Curried functions are easy on the eyes when given to ``str``.
 This is achieved by using the ``__name__`` attribute of underlying callables,
 if they have one::
@@ -454,12 +462,17 @@ if they have one::
     assert str(compose(inc, dbl)) == '_compose(inc, dbl)'  # Note the underscore.
     assert str(compose(inc, x=10)) == '_compose(inc, x=10)'
 
-Meanwhile, using ``__repr__`` reveals that the composed function is in fact
+``Curried`` class
+,,,,,,,,,,,,,,,,,
+
+Using ``__repr__`` reveals that the composed function is in fact
 an object of type ``Curried``::
 
     print(repr(compose(inc, x=10))
-    # Curried(<function compose at 0x7f7440dd5310>, (Curried(<function inc at
-    # 0x7f7440dd51f0>, (), {}, <Signature (x)>),), {'x': 10}, <Signature (g)>)
+    # Curried(<function _compose at 0x000001F8D864A550>,
+    # (Curried(<function inc at 0x000001F8D864A430>, (), {},
+    # <Signature (x: int) -> int>),), {'x': 10},
+    # <Signature (g: Callable[[int], int]) -> int>)
 
 That ``Curried`` object can be deconstructed with the attributes ``func``,
 ``args`` and ``keywords`` (same attribute names as ``functool.partial``
@@ -472,7 +485,7 @@ objects)::
 
 The ``Curried`` object also updates its signature to reflect the parameters
 that its callable still needs.
-In our example, the callable ``i10`` (our Curried object), still expects a
+In our example, the callable ``i10`` (our ``Curried`` object), still expects a
 parameter ``g`` which is a function from ``int`` to ``int``.
 The signature can be accessed via the ``__signature__`` attribute, which is
 of type ``inspect.Signature``::

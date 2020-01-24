@@ -11,19 +11,56 @@ Features
 --------
 
 * Decorators for functions, methods and class methods.
-* Supports positional, positional-only, keyword and keyword-only arguments.
-* Accepts too few arguments (as do ``functools.partial`` and all other currying
-  packages, this is the bare minimum for currying).
+* Supports positional, positional-only, positional-variable,
+  keyword, keyword-only, and keyword-variable arguments.
+* Accepts too few argument.
 * Accepts too many arguments, storing them for the next resulting function that
   wants them.
 * Automatically applies the underlying callable when all the necessary arguments
-  have been passed (unlike ``functools.partial``).
+  have been passed.
 * Automatically re-curries/re-applies when the result of the callable is
-  itself callable (unlike ``functools.partials``).
+  itself callable.
 * Picklable (no lambdas).
 * Flat (``curry(curry(f))`` is simplified to ``curry(f)``).
-* Inspection-friendly: implements ``__signature__``.
+* Inspection-friendly: implements ``__signature__``, ``__name__``, ``__str__``,
+  etc.
 
+
+
+Context
+-------
+
+Mathematically, Python can be approached as a Closed Monoidal Category.
+* Category: Python's functions and other callables can be composed.
+* Monoidal: We can put two python things together to form a new python thing
+  (lists, dictionaries, tuples, class attributes, etc.).
+* Closed: Pythons's functions (callables) are first-class, meaning they can
+  be treated like any other non-callable Python thing.
+
+All closed monoidal categories are also Cartesian closed categories,
+and all Cartesian closed categories have currying.
+
+In simple terms, it is possible to take a function that takes two arguments
+and turn it into a function of one argument that returns a function of one
+argument::
+
+    (a, b) -> c  ===curry==>  a -> (b -> c)
+
+The opposite operation is called un-currying, and lets you call a function
+with more arguments than it requires.
+
+Python is not limited to unary functions and pairs of arguments, Python's
+callable objects accept posititional arguments, keyword arguments, and even
+variable arguments.
+Python has functions, but also methods, some of which can be class methods that
+are in fact implemented as descriptors.
+Furthermore, Python can do introspection, so not only should curried callables
+work, they should also maintain signatures, names, docstrings, etc.
+To complicate things even more, we should be able to pickle curried callables
+and have weakrefs to them.
+
+The ``yummycurry`` package aims at providing a simple and reliable way to
+automatically curry, uncurry and apply (call) any Python callable.
 
 
 Walkthrough

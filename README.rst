@@ -31,6 +31,7 @@ Context
 -------
 
 Mathematically, Python can be approached as a Closed Monoidal Category.
+
 * Category: Python's functions and other callables can be composed.
 * Monoidal: We can put two python things together to form a new python thing
   (lists, dictionaries, tuples, class attributes, etc.).
@@ -40,8 +41,8 @@ Mathematically, Python can be approached as a Closed Monoidal Category.
 All closed monoidal categories are also Cartesian closed categories,
 and all Cartesian closed categories have currying.
 
-In simple terms, it is possible to take a function that takes two arguments
-and turn it into a function of one argument that returns a function of one
+In simple terms, currying takes a function that takes two arguments
+and turns it into a function of one argument that returns a function of one
 argument::
 
     (a, b) -> c  ===curry==>  a -> (b -> c)

@@ -243,11 +243,14 @@ The three following snippets are equivalent::
 
     greet = curry(one_param_only)
     greeting = greet('hello ', 'world')
+    assert greeting == 'hello world'
 
     greet = curry(one_param_only, 'hello ')
     greeting = greet('world')
+    assert greeting == 'hello world'
 
     greeting = curry(one_param_only, 'hello ', 'world')
+    assert greeting == 'hello world'
 
 It is an error to have left-over arguments when the automatic application stops::
 
@@ -255,8 +258,13 @@ It is an error to have left-over arguments when the automatic application stops:
     assert curry(inc, 123) == 124
 
     # Bad:
-    curry(inc, 123, 456, x=789)
-    # TypeError: left-over arguments at the end of evaluation: *(456,), **{'x':789}
+    try:
+        curry(inc, 123, 456, x=789)
+    except TypeError:
+        pass
+
+It raises
+``TypeError: left-over arguments at the end of evaluation: *(456,), **{'x':789}``.
 
 In that example, ``inc(123)`` returns the integer ``124`` which is not callable
 and does not know what to do with the extra arguments.
@@ -423,15 +431,19 @@ There is no workaround, one must give ``starving`` its own argument::
 The same rule applies for variable-keyword-argument parameters::
 
     @curry
-    def black_hole(**slurp):
+    def black_hole(mass, **slurp):
         def hawking_radiation(*, bleep):
             return 'tiny {}'.format(bleep)
-        return hawkins_radiation
 
-    assert black_hole(bleep='proton', curvature='thicc')(bleep='neutrino') == 'tiny neutrino'
+        return hawking_radiation
+
+    assert black_hole(10, bleep='proton', curvature='thicc')(bleep='neutrino') == 'tiny neutrino'
 
 Here, the black hole swallowed our bleeping proton,
 so the Hawking radiation requires that we specify a new bleep.
+
+Be careful: currying a function that takes only variable arguments will execute
+it immediately since its signature is satisfied by getting nothing at all.
 
 As mentioned earlier in this document, variable-argument parameters break the
 general rule of thumb that ``f(x)(y) == f(x, y)``.
@@ -522,6 +534,7 @@ This means that ``curry`` does not wait when a parameter has a default value::
 
 Parameters with default values break the general rule-of-thumb that
 ``f(x, y) == f(x)(y)``.
+
 
 Currying classes, class methods and instance methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

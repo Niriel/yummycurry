@@ -104,7 +104,10 @@ def _curry(f: Any, args: Args = (), kwargs: Optional[Kwargs] = None, /) -> Any:
     if not callable(f):
         # There is nothing more to evaluate.
         if args or kwargs:
-            raise TypeError(f'left-over arguments at the end of evaluation: *{args}, **{kwargs}')
+            raise TypeError(
+                f'{type(f)} is not callable and there are left-over arguments '
+                f'at the end of evaluation: *{args}, **{kwargs}'
+            )
         return f
 
     if isinstance(f, Curried):

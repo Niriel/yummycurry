@@ -81,9 +81,9 @@ def test_non_callable():
     assert curry(5) == 5
 
 
-def test_builtin_function():
-    cstr = curry(str)
-    assert cstr(123) == '123'
+# def test_builtin_function():
+#     cstr = curry(str)
+#     assert cstr(123) == '123'
 
 
 def test_callable_with_no_parameter():
@@ -132,6 +132,22 @@ def test_complain_leftover_params():
     with pytest.raises(TypeError) as e:
         curry('hello', 1)
     assert 'left-over arguments at the end of evaluation' in str(e)
+
+
+def test_kwargs_absorbs():
+    @curry
+    def black_hole(mass, **slurp):
+        return 'singularity'
+
+    assert black_hole(10, curvature='thicc') == 'singularity'
+
+
+def test_args_absorbs():
+    @curry
+    def thief(name, *your_things):
+        return 'haha'
+
+    assert thief('Butch Cassidy', 'wallet', 'dreams') == 'haha'
 
 
 def test_nested_calls():
@@ -229,24 +245,121 @@ def test_readme_examples():
     def dbl(x):
         return x * 2
 
+    dbl = curry(dbl)  # As a function.
+
+    @curry  # As a decorator.
     def inc(x):
         return x + 1
 
+    # ------------
+
     @curry
     def compose(f, g, x):
-        # Composition of unary functions.
+        """Composition of unary functions."""
         # No need to return a lambda, ``curry`` takes care of it.
         return f(g(x))
 
     dbl_inc = compose(dbl, inc)
     assert dbl_inc(10) == 22
 
+    # Function composition is associative: as long as the order or the leaves
+    # is preserved, the way that the tree forks does not matter.
     pipeline_1 = compose(compose(dbl, compose(inc, dbl)), compose(inc, inc))
     pipeline_2 = compose(compose(compose(compose(dbl, inc), dbl), inc), inc)
     assert pipeline_1(10) == 2 * (1 + 2 * (1 + 1 + 10))
     assert pipeline_2(10) == 2 * (1 + 2 * (1 + 1 + 10))
 
-    # ---------------
+    # ------------
+
+    from functools import partial
+
+    def cool(x, y, z):
+        return x * 100 + y * 10 + z
+
+    p = partial(cool, 1, 2, 3)  # Phase 1: explicit currying.
+    result = p()  # Phase 2: explicit application, even if there are no arguments.
+    assert result == 123
+
+    p = partial(cool, 1)  # Explicit currying.
+    p = partial(p, 2)  # Explicit currying, again.
+    result = p(3)  # Explicit application.
+    assert result == 123
+
+    # ------------
+
+    p = curry(cool, 1)
+    p = p(2)
+    result = p(3)
+    assert result == 123
+
+    s = "Don't call us, we'll call you"
+    assert curry(s) == s
+
+    @curry
+    def actually_constant():
+        return 123
+
+    assert actually_constant == 123
+
+    # ------------
+
+    def f0(x: int):  # Uncurried
+        def f1(y: int, z: int) -> int:  # Uncurried
+            return x * 100 + y * 10 + z
+
+        return f1
+
+    # Without currying, this is the only thing that works:
+    assert f0(1)(2, 3) == 123
+
+    try:
+        assert f0(1)(2)(3) == 123
+    except TypeError:
+        pass  # The result of f0(1) is not curried so f0(1)(2) is incorrect.
+
+    # If we curry f0, then its result ``f0(1)`` is automatically curried:
+    f0 = curry(f0)
+    assert f0(1)(2)(3) == 123  # Now it works.
+
+    # ------------
+
+    def one_param_only(x):
+        def i_eat_leftovers(y):
+            return x + y
+
+        return i_eat_leftovers
+
+    try:
+        greeting = one_param_only('hello ', 'world')
+    except TypeError:
+        pass  # We knew it would not work.
+
+    greet = curry(one_param_only)
+    greeting = greet('hello ', 'world')
+    assert greeting == 'hello world'
+
+    greet = curry(one_param_only)
+    greeting = greet('hello ', 'world')
+    assert greeting == 'hello world'
+
+    greet = curry(one_param_only, 'hello ')
+    greeting = greet('world')
+    assert greeting == 'hello world'
+
+    greeting = curry(one_param_only, 'hello ', 'world')
+    assert greeting == 'hello world'
+    # ------------
+
+    # Good:
+    assert curry(inc, 123) == 124
+
+    # Bad:
+    try:
+        curry(inc, 123, 456, x=789)
+    except TypeError:
+        pass
+
+    # ------------
 
     @curry
     def list_map(f, iterable):
@@ -258,32 +371,7 @@ def test_readme_examples():
 
     assert over_primes(inc) == [3, 4, 6, 8]
 
-    # ---------------
-
-    def one_argument_only(x):
-        def i_eat_leftovers(y):
-            return x + y
-
-        return i_eat_leftovers
-
-    try:
-        greeting = one_argument_only('hello ', 'world')
-    except TypeError:
-        pass  # Too many arguments.
-
-    greet = curry(one_argument_only)
-    greeting = greet('hello ', 'world')
-    assert greeting == 'hello world'
-
-    greet = curry(one_argument_only)
-    greeting = greet('hello ', 'world')
-
-    greet = curry(one_argument_only, 'hello ')
-    greeting = greet('world')
-
-    greeting = curry(one_argument_only, 'hello ', 'world')
-
-    # ---------------
+    # ------------
 
     @curry
     def give_name(who, name, verbose=False):
@@ -304,32 +392,51 @@ def test_readme_examples():
                 print('You are already smart enough')
         return give_name(you)
 
-    try:
+    with pytest.raises(TypeError):
         dear_reader = create_genius('spitting fire', name='Darling', iq=160, verbose=True)
-    except TypeError:
-        pass  # multiple values for argument 'iq'.
 
-    try:
+    with pytest.raises(TypeError):
         smart = create_genius(name='Darling', iq=160, verbose=True)
         dear_reader = smart('spitting fire')
-    except TypeError:
-        pass
 
+    dear_reader = create_genius(
+        best_quality='spitting fire',
+        name='Darling',
+        iq=160,
+        verbose=True
+    )
     smart = create_genius(name='Darling', iq=160, verbose=True)
     dear_reader = smart(best_quality='spitting fire')
 
-    # ---------------
-
-    s = "Don't call us, we'll call you"
-    assert curry(s) == s
+    # ------------
 
     @curry
-    def actually_constant():
-        return 123
+    def greedy(x, *args):
+        if args:
+            print('I am stealing your', args)
 
-    assert actually_constant == 123
+        def starving(y):
+            return x + y
 
-    # ---------------
+        return starving
+
+    assert greedy(10)(1) == 11
+
+    with pytest.raises(AssertionError):
+        assert greedy(10, 1) == 11
+
+    assert greedy(10, 1000, 2000, 3000, 4000)(1) == 11
+
+    @curry
+    def black_hole(mass, **slurp):
+        def hawking_radiation(*, bleep):
+            return 'tiny {}'.format(bleep)
+
+        return hawking_radiation
+
+    assert black_hole(10, bleep='proton', curvature='thicc')(bleep='neutrino') == 'tiny neutrino'
+
+    # ------------
 
     @curry
     def inc(x: int) -> int:
@@ -342,34 +449,34 @@ def test_readme_examples():
     def _compose(f: Callable[[int], int], g: Callable[[int], int], x: int) -> int:
         return f(g(x))
 
-    compose = curry(_compose)
+    compose = curry(_compose)  # __name__ will retain the underscore.
 
     assert str(compose(inc, dbl)) == '_compose(inc, dbl)'  # Note the underscore.
     assert str(compose(inc, x=10)) == '_compose(inc, x=10)'
 
-    # ---------------
+    # ------------
 
     i10 = compose(inc, x=10)
-    print(repr(i10))
     assert i10.func == _compose
     assert i10.args == (inc,)
     assert i10.keywords == dict(x=10)
 
     assert i10.__signature__ == inspect.signature(i10)
 
-    # ---------------
+    # ------------
 
     @curry
     def increase(x: int, increment: int = 1):
         return x + increment
 
     assert increase(10) == 11  # Does not wait for ``increment``.
-    assert increase(10, increment=100) == 110
-    inc_100 = increase(increment=100)  # Still wait for x.
 
+    assert increase(10, increment=100) == 110
+
+    inc_100 = increase(increment=100)
     assert inc_100(10) == 110
 
-    # ---------------
+    # ------------
 
     class Rabbit:
         def __init__(self, ears, tails):
@@ -394,23 +501,23 @@ def test_readme_examples():
             )
 
         @curry_method
-        def jump(self, speed, direction):
+        def jump(self, impulse, target):
             # Does not mean anything, just a demonstration.
-            return [speed, direction, self.ears]
+            return [impulse, target, 'boing']
 
     thumper = Rabbit(2, 1)
     monster = Rabbit(3, 2)
 
     thumperize = Rabbit.breed(thumper)
-    oh_god_no = thumperize(monster)
+    oh_god_no = thumperize(monster)  # Currying a class method.
     assert oh_god_no.ears == 2.5
     assert oh_god_no.tails == 2
 
     thumper_jump = thumper.jump('slow')
-    assert thumper_jump('west') == ['slow', 'west', 2]
+    assert thumper_jump('west') == ['slow', 'west', 'boing']
 
     rabbit = curry(Rabbit)
-    deaf = rabbit(0)
-    beethoven = deaf(10)  # 5 per hand.
+    deaf = rabbit(ears=0)
+    beethoven = deaf(tails=10)  # 5 per hand.
     assert beethoven.ears == 0
     assert beethoven.tails == 10

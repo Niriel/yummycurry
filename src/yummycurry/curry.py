@@ -65,7 +65,9 @@ class Curried(CurriedBase):
         return self
 
     def __call__(self, *new_args, **new_kwargs):
-        return _curry(self.func, self.args + new_args, {**self.keywords, **new_kwargs})
+        if new_args or new_kwargs:
+            return _curry(self.func, self.args + new_args, {**self.keywords, **new_kwargs})
+        return self
 
     def __repr__(self) -> str:
         return '{}({}, {}, {}, {})'.format(

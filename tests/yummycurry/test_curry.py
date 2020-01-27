@@ -6,7 +6,7 @@ from typing import Callable
 
 import pytest
 
-from yummycurry import curry, curry_classmethod, curry_method
+from yummycurry import curry, curry_classmethod, curry_method, Curried
 
 
 def derp(a: int, b: str, c: float) -> float:
@@ -79,6 +79,8 @@ def process(x):
 
 def test_non_callable():
     assert curry(5) == 5
+    with pytest.raises(TypeError):
+        Curried(5, (), {}, None)
 
 
 # def test_builtin_function():
@@ -150,6 +152,17 @@ def test_args_absorbs():
     assert thief('Butch Cassidy', 'wallet', 'dreams') == 'haha'
 
 
+def test_call_no_args():
+    def func(_):
+        pass
+
+    # Calling a Curried instance without any argument now returns the instance
+    # unchanged (it used to create a new identical Curried instance).
+    cfunc0 = curry(func)
+    cfunc1 = cfunc0()
+    assert cfunc0 is cfunc1
+
+
 def test_nested_calls():
     @curry
     def add(x: int, /, y: int = 1) -> int:
@@ -179,6 +192,9 @@ def test_monadic_join():
     ccsucc = curry(csucc)
     assert not isinstance(ccsucc.func, type(ccsucc))
     assert ccsucc.func == csucc.func == succ
+    #
+    with pytest.raises(TypeError):
+        _ = Curried(csucc, (), {}, csucc.__signature__)
 
 
 def test_str():
@@ -376,7 +392,8 @@ def test_readme_examples():
     @curry
     def give_name(who, name, verbose=False):
         if verbose:
-            print('Hello', name)
+            # print('Hello', name)
+            pass
         new_who = {**who, 'name': name}
         return new_who
 
@@ -386,10 +403,12 @@ def test_readme_examples():
         if iq > you['iq']:
             you['iq'] = iq
             if verbose:
-                print('Boosting your iq to', iq)
+                # print('Boosting your iq to', iq)
+                pass
         else:
             if verbose:
-                print('You are already smart enough')
+                # print('You are already smart enough')
+                pass
         return give_name(you)
 
     with pytest.raises(TypeError):
@@ -413,7 +432,8 @@ def test_readme_examples():
     @curry
     def greedy(x, *args):
         if args:
-            print('I am stealing your', args)
+            # print('I am stealing your', args)
+            pass
 
         def starving(y):
             return x + y

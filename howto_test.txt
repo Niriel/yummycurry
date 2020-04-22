@@ -3,6 +3,6 @@ pip install -r requirements_tests.txt
 python setup.py develop
 pytest
 coverage run -m pytest
-corerage report
+coverage report
 coverage html
 xdg-open htmlcov/index.html
